@@ -1,14 +1,10 @@
 import sys
-import os
 import pandas as pd
-import warnings
 import json
 import matplotlib.pyplot as plt
 from scipy.optimize import curve_fit
-import scipy
 import numpy as np
-
-warnings.simplefilter(action='ignore', category=pd.errors.PerformanceWarning)
+import seaborn as sns
 
 def Dipole(Q2, MA):
     fFA0 = -1.2670
@@ -129,9 +125,7 @@ def poly(Q2, c0, c1, c2, c3):
 
 def FFzexp(Q2, a1, a2, a3, a4):
     z = CalculateZ(-Q2)
-    isarray = [hasattr(a, "__len__") for a in [a1, a2, a3, a4]]
     rets = []
-    
     As = CalculateAs(a1, a2, a3, a4)
     ret = 0
     for ki in range(len(As)):
@@ -169,7 +163,8 @@ def ExtractResults(file, xvals):
             poptcv, pcovcv = curve_fit(FFzexp, minervax, minervay)
         else:
             # Most data is from https://arxiv.org/pdf/2210.02455. Find ends of
-            # the error bars, fit to polynomial, and then take the mid point.
+            # the error bars, fit to polynomial, and then take the mid point. 
+            # Fit the midpoint to zexp.
             popthigh, pcovhigh = curve_fit(poly, df.highx.dropna(), df.highy.dropna())
             poptlow, pcovlow = curve_fit(poly, df.lowx.dropna(), df.lowy.dropna())
             highy = poly(xvals, *popthigh)
@@ -211,6 +206,12 @@ def main(output, inputs):
     plt.fill_between(xvals, FFzexp(xvals, *glob_popt) - ErrorMag, FFzexp(xvals, *glob_popt) + ErrorMag, alpha=0.5)
     plt.legend()
     plt.savefig(output) 
+    plt.clf()
+
+    coeffs = ['a1', 'a2', 'a3', 'a4']
+    sns.heatmap(glob_pcov, annot=True, fmt='g', xticklabels=coeffs, yticklabels=coeffs)
+    plt.savefig('cov.png')
+    plt.clf()
 
 if __name__ == "__main__":
     printhelp = len(sys.argv) < 3 or sys.argv[1] == "-h"
