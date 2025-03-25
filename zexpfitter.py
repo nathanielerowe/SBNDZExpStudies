@@ -6,6 +6,13 @@ from scipy.optimize import curve_fit
 import numpy as np
 import seaborn as sns
 
+def CalcCov(a, spls, smin):
+    C = np.zeros((4, 4))
+    for i in range(len(a)):
+        for j in range(len(a)):
+            C[i][j] = (1/2)*((a[i] - spls[i])*(a[j] - spls[j]) + (a[i] - smin[i])*(a[j] - smin[j]))
+    return C
+
 def Dipole(Q2, MA):
     fFA0 = -1.2670
     return -fFA0*(1+Q2/MA**2)**-2
@@ -192,24 +199,27 @@ def main(output, inputs):
     # force error for constraint for FA(0)
     avg_ydataerr[0] = 0.0023
 
-    plt.errorbar(xvals, avg_ydata, yerr=avg_ydataerr, label="Averaged Data", marker='o')
-    glob_popt, glob_pcov = curve_fit(FFzexp, xvals, avg_ydata, sigma=avg_ydataerr, absolute_sigma=True)
+    #plt.errorbar(xvals, avg_ydata, yerr=avg_ydataerr, label="Averaged Data", marker='o')
+    plt.errorbar(xvals, avg_ydata, label="Averaged Data", marker='o')
+    glob_popt, _ = curve_fit(FFzexp, xvals, avg_ydata)
+    upper_glob_popt, _ = curve_fit(FFzexp, xvals, avg_ydata + avg_ydataerr)
+    lower_glob_popt, _ = curve_fit(FFzexp, xvals, avg_ydata - avg_ydataerr)
+    print("cv: ", glob_popt) 
+    print("upper - cv: ", upper_glob_popt - glob_popt) 
+    print("cv - lower: ", glob_popt - lower_glob_popt) 
 
+    ErrorMag = upper_glob_popt - glob_popt
     param_str = "Fit Result:\n"
     for i in range(len(glob_popt)):
-        param_str += r"$a_"+str(i+1)+" = "+str(round(glob_popt[i], 3))+" \pm "+str(round(np.sqrt(np.diag(glob_pcov))[i], 3))+"$\n"
+        param_str += r"$a_"+str(i+1)+" = "+str(round(glob_popt[i], 3))+" \pm "+str(round(abs(ErrorMag[i]), 3))+"$\n"
     plt.text(0.0, 0.4, param_str)
-    plt.xlabel(r"$Q^2 (GeV^2)$ ")
-    plt.ylabel(r"$F_{A}(Q^2)$ ")
-    plt.plot(xvals, FFzexp(xvals, *glob_popt), label="Fit")
-    ErrorMag = FFzexpErr(xvals, glob_pcov, glob_popt)
-    plt.fill_between(xvals, FFzexp(xvals, *glob_popt) - ErrorMag, FFzexp(xvals, *glob_popt) + ErrorMag, alpha=0.5)
+    plt.fill_between(xvals, FFzexp(xvals, *upper_glob_popt), FFzexp(xvals, *lower_glob_popt), alpha=0.5)
     plt.legend()
     plt.savefig(output) 
     plt.clf()
 
     coeffs = ['a1', 'a2', 'a3', 'a4']
-    sns.heatmap(glob_pcov, annot=True, fmt='g', xticklabels=coeffs, yticklabels=coeffs)
+    sns.heatmap(CalcCov(glob_popt, upper_glob_popt - glob_popt, glob_popt - lower_glob_popt), annot=True, fmt='g', xticklabels=coeffs, yticklabels=coeffs)
     plt.savefig('cov.png')
     plt.clf()
 
