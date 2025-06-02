@@ -185,6 +185,7 @@ def main(output, inputs):
     all_ydata = []
     all_xdata = []
 
+    plt.figure(figsize=(8, 6))
     for single_input in inputs:
         CV = ExtractResults(single_input, xvals)
         plt.plot(xvals, CV, linestyle='none', marker='o', label=single_input.split(".")[0])
@@ -193,6 +194,14 @@ def main(output, inputs):
         CV[0]=1.2723
         all_ydata.append(CV)
 
+        # For Deuterium, also include GENIE uncertainty
+        if ("Deuterium" in single_input):
+            GENIE_CV = np.array([2.30, -0.6, -3.8, 2.3]) 
+            GENIE_err_percent = np.array([0.14, 0.67, 1.0, 0.75]) 
+            upper_GENIE_popt = GENIE_CV*(np.ones(4) + GENIE_err_percent)
+            lower_GENIE_popt = GENIE_CV*(np.ones(4) - GENIE_err_percent)
+            plt.fill_between(xvals, FFzexp(xvals, *upper_GENIE_popt), FFzexp(xvals, *lower_GENIE_popt), alpha=0.5, label="GENIE Uncert.", color='g')
+
     avg_ydata = np.sum(all_ydata, axis=0)/len(inputs)
     avg_ydataerr = np.std(all_ydata, axis=0)
 
@@ -200,7 +209,7 @@ def main(output, inputs):
     avg_ydataerr[0] = 0.0023
 
     #plt.errorbar(xvals, avg_ydata, yerr=avg_ydataerr, label="Averaged Data", marker='o')
-    plt.errorbar(xvals, avg_ydata, label="Averaged Data", marker='o')
+    plt.errorbar(xvals, avg_ydata, label="Averaged Data", marker='o', color='b')
     glob_popt, _ = curve_fit(FFzexp, xvals, avg_ydata)
     upper_glob_popt, _ = curve_fit(FFzexp, xvals, avg_ydata + avg_ydataerr)
     lower_glob_popt, _ = curve_fit(FFzexp, xvals, avg_ydata - avg_ydataerr)
@@ -210,11 +219,18 @@ def main(output, inputs):
 
     ErrorMag = upper_glob_popt - glob_popt
     param_str = "Fit Result:\n"
+
     for i in range(len(glob_popt)):
         param_str += r"$a_"+str(i+1)+" = "+str(round(glob_popt[i], 3))+" \pm "+str(round(abs(ErrorMag[i]), 3))+"$\n"
-    plt.text(0.0, 0.4, param_str)
-    plt.fill_between(xvals, FFzexp(xvals, *upper_glob_popt), FFzexp(xvals, *lower_glob_popt), alpha=0.5)
-    plt.legend()
+
+    plt.text(0.0, 0.3, param_str, fontsize=13)
+    plt.fill_between(xvals, FFzexp(xvals, *upper_glob_popt), FFzexp(xvals, *lower_glob_popt), alpha=0.5, label='New Uncert.')
+    plt.legend(fontsize=13)
+    plt.tick_params(labelsize=15)
+    plt.xlabel(r"$Q^{2} [GeV^{2}]$", fontsize=15)
+    plt.ylabel(r"$F_{A}(Q^{2})$", fontsize=15)
+    plt.title("Axial Form Factor Z-Expansion Fit", fontsize=20)
+    plt.text(0.0, 0.2, "Nathaniel Rowe", fontsize=13)
     plt.savefig(output) 
     plt.clf()
 
