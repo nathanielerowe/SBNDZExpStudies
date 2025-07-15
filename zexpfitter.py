@@ -180,6 +180,12 @@ def ExtractResults(file, xvals):
 
     return FFzexp(xvals, *poptcv)
 
+normal_inputs ={"Bali": "Bali et al.",
+                "Park": "Park et al.",
+                "Djukanovic": "Djukanovic et al.",
+                "minervacv": "Minerva Result",
+                "Deuterium": "Deuterium Result"}
+
 def main(output, inputs):
     xvals = np.linspace(0, 1.0, 31)
     all_ydata = []
@@ -188,7 +194,12 @@ def main(output, inputs):
     plt.figure(figsize=(8, 6))
     for single_input in inputs:
         CV = ExtractResults(single_input, xvals)
-        plt.plot(xvals, CV, linestyle='none', marker='o', label=single_input.split(".")[0])
+        file_prefix = single_input.split(".")[0]
+        if file_prefix in normal_inputs.keys(): 
+            plt.plot(xvals, CV, linestyle='none', marker='o', label=normal_inputs[file_prefix])
+        else:
+            plt.plot(xvals, CV, linestyle='none', marker='o', label=single_input.split(".")[0])
+
         all_xdata.append(xvals)
         # force constraint for FA(0)
         CV[0]=1.2723
